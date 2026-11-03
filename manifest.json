@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Jarvis",
+  "version": "0.1.0",
+  "description": "Voice tasks, events and reminders. Press Alt+J and speak.",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": ["https://api.groq.com/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "Jarvis (Alt+J)" },
+  "options_page": "options.html",
+  "icons": { "128": "icon.png" },
+  "commands": {
+    "_execute_action": { "suggested_key": { "default": "Alt+J" }, "description": "Open Jarvis and start listening" }
+  }
+}

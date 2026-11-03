@@ -1,0 +1,13 @@
+{
+  "name": "jarvis-extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild node_modules/chrono-node/dist/esm/index.js --bundle --format=esm --outfile=vendor/chrono.js",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "chrono-node": "^2.10.3",
+    "esbuild": "^0.28.2"
+  }
+}

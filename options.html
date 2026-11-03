@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Jarvis setup</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>body { width: auto; max-width: 480px; margin: 40px auto; padding: 0 16px; } button { padding: 8px 14px; } section { margin-bottom: 28px; }</style>
+</head>
+<body>
+  <h1>Jarvis setup</h1>
+  <section>
+    <h2>1. Microphone</h2>
+    <p>Chrome can't ask for the mic inside the popup, so allow it here once.</p>
+    <button id="mic-btn">Allow microphone</button>
+    <p id="mic-status" role="status"></p>
+  </section>
+  <section>
+    <h2>2. Groq key (optional)</h2>
+    <p>Used only when a command doesn't match the built-in phrasings. Stored in this browser only, unencrypted.</p>
+    <form id="key-form">
+      <input id="key" type="password" placeholder="gsk_…" aria-label="Groq API key" autocomplete="off">
+      <button>Save</button>
+    </form>
+    <p id="key-status" role="status"></p>
+  </section>
+  <section>
+    <h2>3. Shortcut</h2>
+    <p>Alt+J opens Jarvis. Change it at <code>chrome://extensions/shortcuts</code>.</p>
+  </section>
+  <script type="module" src="options.js"></script>
+</body>
+</html>
