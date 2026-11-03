@@ -20,6 +20,13 @@ const cases = [
   ["Jarvis, look up the speed of light", { type: "search", title: "the speed of light", when: null }],
   ["Who wrote O Captain! My Captain?", { type: "search", title: "who wrote o captain! my captain", when: null }],
   ["what's the weather in tashkent", { type: "search", title: "what's the weather in tashkent", when: null }],
+  ["Open YouTube", { type: "open", title: "youtube", when: null, url: "https://www.youtube.com" }],
+  ["jarvis open you tube.", { type: "open", title: "you tube", when: null, url: "https://www.youtube.com" }],
+  ["go to ozodjonov.com", { type: "open", title: "ozodjonov.com", when: null, url: "https://ozodjonov.com" }],
+  ["open khan academy", { type: "open", title: "khan academy", when: null, url: "https://www.google.com/search?q=khan%20academy" }],
+  ["play bohemian rhapsody on spotify", { type: "open", title: "bohemian rhapsody on spotify", when: null, url: "https://open.spotify.com/search/bohemian%20rhapsody" }],
+  ["search for lofi beats on youtube", { type: "open", title: "lofi beats on youtube", when: null, url: "https://www.youtube.com/results?search_query=lofi%20beats" }],
+  ["play interstellar soundtrack", { type: "open", title: "interstellar soundtrack on youtube", when: null, url: "https://www.youtube.com/results?search_query=interstellar%20soundtrack" }],
 ];
 
 for (const [input, want] of cases) test(input, () => assert.deepEqual(parse(input, now), want));

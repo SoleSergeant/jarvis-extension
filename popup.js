@@ -26,6 +26,11 @@ async function handle(text) {
     if (!cmd) return reply(hint, "I didn't get that.");
   }
   if (cmd.type === "search") return search(cmd.title);
+  if (cmd.type === "open") {
+    // Speak first: the new tab takes focus and closes the popup.
+    await reply(`Opening ${cmd.title}.`);
+    return chrome.tabs.create({ url: cmd.url });
+  }
   if (cmd.when && cmd.type !== "task" && cmd.when <= Date.now()) return reply(`${fmt(cmd.when)} has already passed. Nothing saved.`);
   await addItem(cmd);
   const saved = `Saved ${cmd.type}: ${cmd.title}${cmd.when ? `, ${fmt(cmd.when)}` : ""}`;
@@ -37,7 +42,7 @@ async function search(query) {
   const key = await groqKey();
   if (!key) {
     // Speak before opening the tab: the new tab takes focus and closes the popup.
-    reply(`Opening a Google search for “${query}”.`);
+    await reply(`Opening a Google search for “${query}”.`);
     return chrome.tabs.create({ url: `https://www.google.com/search?q=${encodeURIComponent(query)}` });
   }
   say(`🔎 Searching: ${query}…`);

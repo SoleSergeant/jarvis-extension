@@ -1,4 +1,15 @@
+import { getVoices, bestVoice, speak } from "./voice.js";
+
 const $ = (id) => document.getElementById(id);
+
+(async () => {
+  const voices = (await getVoices()).filter((v) => !v.lang || v.lang.startsWith("en"));
+  const { voiceName } = await chrome.storage.local.get("voiceName");
+  $("voice").replaceChildren(...voices.map((v) => new Option(v.voiceName, v.voiceName)));
+  $("voice").value = voiceName || bestVoice(voices);
+})();
+$("voice").onchange = () => chrome.storage.local.set({ voiceName: $("voice").value });
+$("voice-test").onclick = () => speak("Your reminder to revise chemistry is due in ten minutes.");
 
 $("mic-btn").onclick = async () => {
   try {

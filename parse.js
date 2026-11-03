@@ -8,12 +8,43 @@ const COMMANDS = [
 ];
 
 const SEARCH = /^(?:search(?: the web)?(?: for)?|look up|google)\s+/;
-const QUESTION = /^(?:who|what|when|where|which|why|how)(?:'s|\s)/;
+const SEARCH_ON = /^(?:play|search(?: for)?|look up|find)\s+(.+?)\s+on\s+(youtube|spotify|google)$/;
+const PLAY = /^play\s+(.+)$/; // plain "play X" goes to YouTube
+const OPEN = /^(?:open|go to|launch)\s+(?:up\s+)?(?:the\s+)?(.+)$/;
+// shortcut: Spotify/YouTube open search results, not auto-play; that needs their APIs and a login.
+const SEARCH_URL = {
+  youtube: "https://www.youtube.com/results?search_query=",
+  spotify: "https://open.spotify.com/search/",
+  google: "https://www.google.com/search?q=",
+};
+const SITES = {
+  youtube: "https://www.youtube.com",
+  spotify: "https://open.spotify.com",
+  gmail: "https://mail.google.com",
+  google: "https://www.google.com",
+  calendar: "https://calendar.google.com",
+  github: "https://github.com",
+  chatgpt: "https://chatgpt.com",
+  telegram: "https://web.telegram.org",
+  instagram: "https://www.instagram.com",
+};
+function siteUrl(name) {
+  const key = name.replace(/\s+/g, ""); // speech often splits "you tube"
+  if (SITES[key]) return SITES[key];
+  if (/^[\w-]+(\.[\w-]+)+$/.test(key)) return `https://${key}`; // "open ozodjonov.com"
+  return SEARCH_URL.google + encodeURIComponent(name);
+}
+const QUESTION =/^(?:who|what|when|where|which|why|how)(?:'s|\s)/;
 
 // Returns {type, title, when (ms or null)} or null when no rule fits (caller may fall back to Groq).
 // For "search", title is the query.
 export function parse(text, now = new Date()) {
   const clean = text.trim().toLowerCase().replace(/^(?:hey |ok )?jarvis[,.]?\s*/, "").replace(/[.!?]+$/, "");
+  const play = clean.match(PLAY);
+  const site = clean.match(SEARCH_ON) ?? (play && [play[0], play[1], "youtube"]);
+  if (site) return { type: "open", title: `${site[1]} on ${site[2]}`, when: null, url: SEARCH_URL[site[2]] + encodeURIComponent(site[1]) };
+  const name = clean.match(OPEN)?.[1];
+  if (name) return { type: "open", title: name, when: null, url: siteUrl(name) };
   if (SEARCH.test(clean)) return { type: "search", title: clean.replace(SEARCH, ""), when: null };
   if (QUESTION.test(clean)) return { type: "search", title: clean, when: null };
   const cmd = COMMANDS.find((c) => c.re.test(clean));
