@@ -1,15 +1,23 @@
-import { getVoices, bestVoice, speak } from "./voice.js";
+import { getVoices, bestVoice, speak, AI_VOICES } from "./voice.js";
 
 const $ = (id) => document.getElementById(id);
+const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
 (async () => {
   const voices = (await getVoices()).filter((v) => !v.lang || v.lang.startsWith("en"));
-  const { voiceName } = await chrome.storage.local.get("voiceName");
-  $("voice").replaceChildren(...voices.map((v) => new Option(v.voiceName, v.voiceName)));
-  $("voice").value = voiceName || bestVoice(voices);
+  const { voiceName, groqKey } = await chrome.storage.local.get(["voiceName", "groqKey"]);
+  $("voice").replaceChildren(
+    ...AI_VOICES.map((v) => new Option(`${cap(v)} (AI voice)`, `groq:${v}`)),
+    ...voices.map((v) => new Option(`${v.voiceName} (Chrome)`, v.voiceName)),
+  );
+  $("voice").value = voiceName || (groqKey ? `groq:${AI_VOICES[0]}` : bestVoice(voices));
 })();
 $("voice").onchange = () => chrome.storage.local.set({ voiceName: $("voice").value });
-$("voice-test").onclick = () => speak("Your reminder to revise chemistry is due in ten minutes.");
+$("voice-test").onclick = async () => {
+  $("voice-status").textContent = "Speaking…";
+  const { error } = await speak("Your reminder to revise chemistry is due in ten minutes.");
+  $("voice-status").textContent = error ? `AI voice failed, used Chrome's voice: ${error}` : "";
+};
 
 $("mic-btn").onclick = async () => {
   try {

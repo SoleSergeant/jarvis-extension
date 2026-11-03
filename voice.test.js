@@ -1,6 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bestVoice } from "./voice.js";
+import { bestVoice, chunks } from "./voice.js";
+
+test("short text stays one piece", () => assert.deepEqual(chunks("O Captain, my Captain. Saved task: buy milk"), ["O Captain, my Captain. Saved task: buy milk"]));
+test("long text splits at sentence ends, each piece within 200 characters", () => {
+  const s = "Mount Everest is the highest mountain on Earth above sea level. ".repeat(5);
+  const out = chunks(s);
+  assert.ok(out.length > 1 && out.every((c) => c.length <= 200 && c.endsWith(".")));
+  assert.equal(out.join(" "), s.trim());
+});
+test("one sentence over 200 characters splits at spaces", () => {
+  const out = chunks("word ".repeat(80).trim());
+  assert.ok(out.length === 2 && out.every((c) => c.length <= 200));
+  assert.equal(out.join(" ").split(" ").length, 80);
+});
 
 const v = (voiceName, lang = "en-US") => ({ voiceName, lang });
 
