@@ -50,6 +50,27 @@ export async function groqSearch(query, key) {
   return answer;
 }
 
+// Friendly conversation; searches the web only when a reply needs current facts.
+// history is [{role: "user"|"assistant", content}], newest last.
+export async function groqTalk(history, key) {
+  const content = await groqChat(key, {
+    reasoning_effort: "low",
+    tools: [{ type: "browser_search" }],
+    tool_choice: "auto",
+    messages: [
+      {
+        role: "system",
+        content: `You are Jarvis, a warm, witty personal assistant talking to a tired student by voice. Reply in one to three short sentences that sound natural read aloud. No lists, links, emoji or markdown.
+Don't address them by name or title; that is added for you. Play along with riddles, jokes and small talk; for a riddle, don't give the answer until asked. Search the web only for facts that may have changed.`,
+      },
+      ...history,
+    ],
+  });
+  const answer = cleanAnswer(content);
+  if (!answer) throw new Error("empty answer");
+  return answer;
+}
+
 // Drops citation markers like 【2†L6-L10】 and markdown so the voice doesn't read them out.
 export const cleanAnswer = (s) => (s ?? "").replace(/【[^】]*】/g, "").replace(/[*_#`]/g, "").replace(/\s+/g, " ").trim();
 

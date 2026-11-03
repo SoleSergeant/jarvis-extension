@@ -34,10 +34,11 @@ function siteUrl(name) {
   if (/^[\w-]+(\.[\w-]+)+$/.test(key)) return `https://${key}`; // "open ozodjonov.com"
   return SEARCH_URL.google + encodeURIComponent(name);
 }
-const QUESTION =/^(?:who|what|when|where|which|why|how)(?:'s|\s)/;
+const QUESTION = /^(?:who|what|when|where|which|why|how)(?:'s|\s)/;
+const SMALL_TALK = /^(?:tell me|give me|i'm|i am|i feel|hi|hello|hey|thanks|thank you|good (?:morning|afternoon|evening|night))\b/;
 
 // Returns {type, title, when (ms or null)} or null when no rule fits (caller may fall back to Groq).
-// For "search", title is the query.
+// For "search", title is the query; for "talk", it's what to say to Groq's chat.
 export function parse(text, now = new Date()) {
   const clean = text.trim().toLowerCase().replace(/^(?:hey |ok )?jarvis[,.]?\s*/, "").replace(/[.!?]+$/, "");
   const play = clean.match(PLAY);
@@ -46,7 +47,7 @@ export function parse(text, now = new Date()) {
   const name = clean.match(OPEN)?.[1];
   if (name) return { type: "open", title: name, when: null, url: siteUrl(name) };
   if (SEARCH.test(clean)) return { type: "search", title: clean.replace(SEARCH, ""), when: null };
-  if (QUESTION.test(clean)) return { type: "search", title: clean, when: null };
+  if (QUESTION.test(clean) || SMALL_TALK.test(clean)) return { type: "talk", title: clean, when: null };
   const cmd = COMMANDS.find((c) => c.re.test(clean));
   if (!cmd) return null;
 

@@ -1,5 +1,5 @@
 import { parse } from "./parse.js";
-import { groqParse, groqSearch } from "./groq.js";
+import { groqParse, groqSearch, groqTalk } from "./groq.js";
 import { getItems, addItem, removeItem, toggleDone } from "./store.js";
 import { speak } from "./voice.js";
 
@@ -23,9 +23,10 @@ async function handle(text) {
     } catch (e) {
       return reply(`Groq failed, nothing saved: ${e.message}`, "Groq failed. Nothing saved.");
     }
-    if (!cmd) return reply(hint, "I didn't get that.");
+    if (!cmd) return talk(text);
   }
   if (cmd.type === "search") return search(cmd.title);
+  if (cmd.type === "talk") return talk(text);
   if (cmd.type === "open") {
     // Speak first: the new tab takes focus and closes the popup.
     await reply(`Opening ${cmd.title}.`);
@@ -50,6 +51,25 @@ async function search(query) {
     reply(await groqSearch(query, key));
   } catch (e) {
     reply(`Search failed: ${e.message}`, "The search failed.");
+  }
+}
+
+const MEMORY_MS = 10 * 60 * 1000;
+// Recent lines live in session storage so "what's the answer?" works after reopening the popup; Chrome clears it on exit.
+async function talk(text) {
+  const key = await groqKey();
+  if (!key) return search(text); // no key: fall back to a Google tab, as before
+  const { chat } = await chrome.storage.session.get("chat");
+  const history = chat && Date.now() - chat.at < MEMORY_MS ? chat.history : [];
+  history.push({ role: "user", content: text });
+  say("💬 …");
+  try {
+    const answer = await groqTalk(history, key);
+    history.push({ role: "assistant", content: answer });
+    await chrome.storage.session.set({ chat: { at: Date.now(), history: history.slice(-10) } });
+    reply(answer);
+  } catch (e) {
+    reply(`Groq failed: ${e.message}`, "Sorry, I couldn't think of a reply.");
   }
 }
 
