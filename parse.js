@@ -7,9 +7,15 @@ const COMMANDS = [
   { re: /^(?:add (?:a )?task|new task|task|add)\s+/, type: "task", needsTime: false },
 ];
 
+const SEARCH = /^(?:search(?: the web)?(?: for)?|look up|google)\s+/;
+const QUESTION = /^(?:who|what|when|where|which|why|how)(?:'s|\s)/;
+
 // Returns {type, title, when (ms or null)} or null when no rule fits (caller may fall back to Groq).
+// For "search", title is the query.
 export function parse(text, now = new Date()) {
   const clean = text.trim().toLowerCase().replace(/^(?:hey |ok )?jarvis[,.]?\s*/, "").replace(/[.!?]+$/, "");
+  if (SEARCH.test(clean)) return { type: "search", title: clean.replace(SEARCH, ""), when: null };
+  if (QUESTION.test(clean)) return { type: "search", title: clean, when: null };
   const cmd = COMMANDS.find((c) => c.re.test(clean));
   if (!cmd) return null;
 

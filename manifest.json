@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Jarvis",
-  "version": "0.1.0",
-  "description": "Voice tasks, events and reminders. Press Alt+J and speak.",
-  "permissions": ["storage", "alarms", "notifications"],
+  "version": "0.2.0",
+  "description": "Voice tasks, events, reminders and web search. Press Alt+J and speak.",
+  "permissions": ["storage", "alarms", "notifications", "tts"],
   "host_permissions": ["https://api.groq.com/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_popup": "popup.html", "default_title": "Jarvis (Alt+J)" },

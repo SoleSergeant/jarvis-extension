@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkResult } from "./groq.js";
+import { checkResult, cleanAnswer } from "./groq.js";
+
+test("search keeps the question and drops any time", () =>
+  assert.deepEqual(checkResult({ type: "search", title: "how tall is everest", when: "2026-11-03T10:00" }), {
+    type: "search",
+    title: "how tall is everest",
+    when: null,
+  }));
+test("cleanAnswer strips citations and markdown", () =>
+  assert.equal(cleanAnswer("Mount Everest is **8,849 m** tall.【1†L3-L5】\n Source: survey【2†L1】"), "Mount Everest is 8,849 m tall. Source: survey"));
 
 test("keeps a valid reminder", () =>
   assert.deepEqual(checkResult({ type: "reminder", title: " call mom ", when: "2026-11-03T17:00" }), {

@@ -16,10 +16,14 @@ const cases = [
   ["add event math exam on friday at 10am", { type: "event", title: "math exam", when: at(6, 10) }],
   ["schedule dentist next monday", { type: "event", title: "dentist", when: at(9, 9) }],
   ["event MUN meeting on 15 november at 6pm", { type: "event", title: "mun meeting", when: at(15, 18) }],
+  ["search for population of uzbekistan", { type: "search", title: "population of uzbekistan", when: null }],
+  ["Jarvis, look up the speed of light", { type: "search", title: "the speed of light", when: null }],
+  ["Who wrote O Captain! My Captain?", { type: "search", title: "who wrote o captain! my captain", when: null }],
+  ["what's the weather in tashkent", { type: "search", title: "what's the weather in tashkent", when: null }],
 ];
 
 for (const [input, want] of cases) test(input, () => assert.deepEqual(parse(input, now), want));
 
 test("reminder without a time falls through", () => assert.equal(parse("remind me to call mom", now), null));
-test("unknown command falls through", () => assert.equal(parse("what's the weather", now), null));
+test("unknown command falls through", () => assert.equal(parse("turn off the lights", now), null));
 test("empty title falls through", () => assert.equal(parse("remind me at 5pm", now), null));

@@ -1,9 +1,13 @@
 import { parse } from "./parse.js";
-import { groqParse } from "./groq.js";
+import { groqParse, groqSearch } from "./groq.js";
 import { getItems, addItem, removeItem, toggleDone } from "./store.js";
+import { speak } from "./voice.js";
 
 const $ = (id) => document.getElementById(id);
 const say = (msg) => ($("status").textContent = msg);
+// Answers to a command are shown and spoken; progress messages ("Listening…") are only shown.
+const reply = (msg, spoken = msg) => (say(msg), speak(spoken));
+const groqKey = async () => (await chrome.storage.local.get("groqKey")).groqKey;
 const icons = { task: "☐", event: "📅", reminder: "⏰" };
 const fmt = (ms) => new Date(ms).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -11,19 +15,37 @@ async function handle(text) {
   say(`“${text}”…`);
   let cmd = parse(text);
   if (!cmd) {
-    const { groqKey } = await chrome.storage.local.get("groqKey");
-    if (!groqKey) return say(`Didn't get “${text}”. Try: “remind me to… at 5pm”, “add task…”, “event… on Friday at 10”.`);
+    const key = await groqKey();
+    const hint = `Didn't get “${text}”. Try: “remind me to… at 5pm”, “add task…”, “event… on Friday at 10”, “search…”.`;
+    if (!key) return reply(hint, "I didn't get that.");
     try {
-      cmd = await groqParse(text, groqKey);
+      cmd = await groqParse(text, key);
     } catch (e) {
-      return say(`Groq failed, nothing saved: ${e.message}`);
+      return reply(`Groq failed, nothing saved: ${e.message}`, "Groq failed. Nothing saved.");
     }
-    if (!cmd) return say(`Didn't get “${text}”. Nothing saved.`);
+    if (!cmd) return reply(hint, "I didn't get that.");
   }
-  if (cmd.when && cmd.type !== "task" && cmd.when <= Date.now()) return say(`${fmt(cmd.when)} has already passed. Nothing saved.`);
+  if (cmd.type === "search") return search(cmd.title);
+  if (cmd.when && cmd.type !== "task" && cmd.when <= Date.now()) return reply(`${fmt(cmd.when)} has already passed. Nothing saved.`);
   await addItem(cmd);
-  say(`${icons[cmd.type]} Saved ${cmd.type}: ${cmd.title}${cmd.when ? ` · ${fmt(cmd.when)}` : ""}`);
+  const saved = `Saved ${cmd.type}: ${cmd.title}${cmd.when ? `, ${fmt(cmd.when)}` : ""}`;
+  reply(`${icons[cmd.type]} ${saved}`, saved);
   render();
+}
+
+async function search(query) {
+  const key = await groqKey();
+  if (!key) {
+    // Speak before opening the tab: the new tab takes focus and closes the popup.
+    reply(`Opening a Google search for “${query}”.`);
+    return chrome.tabs.create({ url: `https://www.google.com/search?q=${encodeURIComponent(query)}` });
+  }
+  say(`🔎 Searching: ${query}…`);
+  try {
+    reply(await groqSearch(query, key));
+  } catch (e) {
+    reply(`Search failed: ${e.message}`, "The search failed.");
+  }
 }
 
 async function render() {
@@ -60,7 +82,7 @@ function listen() {
     if (e.error === "not-allowed") {
       say("Microphone not allowed yet. Opening setup…");
       chrome.runtime.openOptionsPage();
-    } else if (e.error === "no-speech") say("Didn't catch that. Click 🎙 to try again.");
+    } else if (e.error === "no-speech") reply("Didn't catch that. Click 🎙 to try again.", "I didn't catch that.");
     else say(`Mic error: ${e.error}`);
   };
   rec.start();

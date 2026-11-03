@@ -1,4 +1,5 @@
 import { getItems } from "./store.js";
+import { speak } from "./voice.js";
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   const item = (await getItems()).find((i) => i.id === alarm.name);
@@ -11,4 +12,5 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     priority: 2,
     requireInteraction: true,
   });
+  speak(`${item.type === "event" ? "Event now" : "Reminder"}: ${item.title}`);
 });
