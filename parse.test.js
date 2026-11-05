@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parse } from "./parse.js";
+import { parse, afterWake } from "./parse.js";
 
 const now = new Date(2026, 10, 3, 14, 0); // Tue 3 Nov 2026, 14:00 local
 const at = (d, h, m = 0) => new Date(2026, 10, d, h, m).getTime();
@@ -37,3 +37,11 @@ for (const [input, want] of cases) test(input, () => assert.deepEqual(parse(inpu
 test("reminder without a time falls through", () => assert.equal(parse("remind me to call mom", now), null));
 test("unknown command falls through", () => assert.equal(parse("turn off the lights", now), null));
 test("empty title falls through", () => assert.equal(parse("remind me at 5pm", now), null));
+
+test("afterWake keeps only what follows the name", () => {
+  assert.equal(afterWake("Hey Jarvis, open YouTube"), "open YouTube");
+  assert.equal(afterWake("so I was saying jarvis what time is it"), "what time is it");
+  assert.equal(afterWake("Jarvis."), "");
+  assert.equal(afterWake("what's for dinner"), null);
+  assert.equal(afterWake("jarvisville is nice"), null);
+});

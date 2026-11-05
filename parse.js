@@ -37,6 +37,9 @@ function siteUrl(name) {
 const QUESTION = /^(?:who|what|when|where|which|why|how)(?:'s|\s)/;
 const SMALL_TALK = /^(?:tell me|give me|i'm|i am|i feel|hi|hello|hey|thanks|thank you|good (?:morning|afternoon|evening|night))\b/;
 
+// For the listening tab: what was said after "Jarvis" ("" if nothing yet), or null if the name wasn't said.
+export const afterWake = (text) => text.match(/\bjarvis\b[,.!?]*\s*(.*)$/i)?.[1].trim() ?? null;
+
 // Returns {type, title, when (ms or null)} or null when no rule fits (caller may fall back to Groq).
 // For "search", title is the query; for "talk", it's what to say to Groq's chat.
 export function parse(text, now = new Date()) {
