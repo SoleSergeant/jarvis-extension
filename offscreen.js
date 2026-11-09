@@ -1,9 +1,17 @@
 const API = "https://api.groq.com/openai/v1/audio/speech";
 let turn = 0; // a newer reply cuts off the one still playing
 let playing;
+let cut; // ends the wait on the piece now playing: a paused <audio> never fires "ended"
+
+function stop() {
+  turn++;
+  playing?.pause();
+  cut?.();
+}
 
 chrome.runtime.onMessage.addListener((msg, _sender, send) => {
   if (msg.target !== "offscreen") return;
+  if (msg.stop) return stop(), send({});
   play(msg).then(() => send({}), (e) => send({ error: e.message }));
   return true; // answer asynchronously
 });
@@ -20,19 +28,27 @@ const fetchAudio = (input, voice, key) =>
     return a;
   });
 
-async function play({ chunks, voice, key }) {
-  const id = ++turn;
-  playing?.pause();
+// replyId names the reply to the page that asked, which is told when it ends ("speech-end").
+async function play({ chunks, voice, key, id: replyId }) {
+  stop(); // a newer reply cuts off the one still playing
+  const id = turn;
+  const ended = () => chrome.runtime.sendMessage({ target: "speech-end", id: replyId }).catch(() => {});
   const audios = chunks.map((c) => fetchAudio(c, voice, key)); // fetch all pieces at once, play in order
-  playing = await audios[0]; // a failure here makes the caller fall back to Chrome's voice
+  const first = await audios[0]; // a failure here makes the caller fall back to Chrome's voice
+  if (id !== turn) return ended(); // cut off while fetching
+  playing = first;
   await playing.play();
   (async () => {
-    for (const p of audios) {
-      const a = await p;
-      if (id !== turn) return;
-      playing = a;
-      if (a.paused) await a.play();
-      await new Promise((r) => (a.onended = r));
+    try {
+      for (const p of audios) {
+        const a = await p;
+        if (id !== turn) return;
+        playing = a;
+        if (a.paused) await a.play();
+        await new Promise((r) => ((a.onended = r), (cut = r)));
+      }
+    } finally {
+      ended();
     }
   })().catch(() => {}); // a later piece failing just ends the reply early
 }

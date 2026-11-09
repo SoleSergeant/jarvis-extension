@@ -7,6 +7,45 @@ const COMMANDS = [
   { re: /^(?:add (?:a )?task|new task|task|add)\s+/, type: "task", needsTime: false },
 ];
 
+const TAB = String.raw`(?:(?:this|the|current)\s+)?(?:tab|page)`;
+const BROWSER = [
+  [new RegExp(`^close ${TAB}$`), "close"],
+  [/^(?:next|right) tab$/, "next"],
+  [/^(?:previous|last|left) tab$/, "prev"],
+  [/^re-?open (?:the )?(?:last )?(?:closed )?tab$/, "reopen"],
+  [/^go back$/, "back"],
+  [/^go forward$/, "forward"],
+  [new RegExp(`^(?:reload|refresh)(?: ${TAB})?$`), "reload"],
+  [/^scroll down$/, "scrollDown"],
+  [/^scroll up$/, "scrollUp"],
+  [/^scroll to (?:the )?top$/, "top"],
+  [/^scroll to (?:the )?bottom$/, "bottom"],
+  [new RegExp(`^mute ${TAB}$`), "mute"],
+  [new RegExp(`^unmute ${TAB}$`), "unmute"],
+];
+const SWITCH = /^(?:switch|go) to (?:the )?(.+?) tab$/;
+const CLOSE_MATCH = /^close (?:the )?(.+?)(?: tab)?$/; // after BROWSER, so "close this tab" stays "close"
+const CLICK = /^(?:click|press|tap)(?: on)? (.+)$/;
+const TYPE = /^type (.+) (?:in|into) (.+)$/; // not "write": "write a haiku in spanish" is chat // greedy text: splits on the last "in"/"into"
+const SITE_SEARCH = /^search (?:this|the) (?:site|page) for (.+)$/;
+const SUMMARIZE = new RegExp(`^(?:summarize|summarise|sum up) ${TAB}$`);
+const ASK_PAGE = new RegExp(`^what does ${TAB} say about (.+)$`);
+
+function browserCommand(clean) {
+  const page = (action, target = null, text = null) => ({ type: "page", action, title: clean, target, text, when: null });
+  const hit = BROWSER.find(([re]) => re.test(clean));
+  if (hit) return { type: "browser", action: hit[1], title: clean, when: null };
+  let m;
+  if ((m = clean.match(SWITCH))) return { type: "browser", action: "switch", title: m[1], when: null };
+  if ((m = clean.match(CLOSE_MATCH))) return { type: "browser", action: "closeMatch", title: m[1], when: null };
+  if ((m = clean.match(SITE_SEARCH))) return page("siteSearch", null, m[1]);
+  if ((m = clean.match(TYPE))) return page("type", m[2], m[1]);
+  if ((m = clean.match(CLICK))) return page("click", m[1]);
+  if (SUMMARIZE.test(clean)) return page("summarize");
+  if ((m = clean.match(ASK_PAGE))) return page("ask", m[1]);
+  return null;
+}
+
 const SEARCH = /^(?:search(?: the web)?(?: for)?|look up|google)\s+/;
 const SEARCH_ON = /^(?:play|search(?: for)?|look up|find)\s+(.+?)\s+on\s+(youtube|spotify|google)$/;
 const PLAY = /^play\s+(.+)$/; // plain "play X" goes to YouTube
@@ -37,6 +76,12 @@ function siteUrl(name) {
 const QUESTION = /^(?:who|what|when|where|which|why|how)(?:'s|\s)/;
 const SMALL_TALK = /^(?:tell me|give me|i'm|i am|i feel|hi|hello|hey|thanks|thank you|good (?:morning|afternoon|evening|night))\b/;
 
+// A short phrase meant to cut Jarvis off mid-sentence; longer sentences with "stop" in them are commands.
+export const isStop = (text) =>
+  /^(?:jarvis )?(?:ok |okay )?(?:stop(?: it| talking)?|quiet|be quiet|shut up|enough|that's enough)$/.test(
+    text.toLowerCase().replace(/[^a-z' ]/g, " ").replace(/\s+/g, " ").trim(),
+  );
+
 // For the listening tab: what was said after "Jarvis" ("" if nothing yet), or null if the name wasn't said.
 export const afterWake = (text) => text.match(/\bjarvis\b[,.!?]*\s*(.*)$/i)?.[1].trim() ?? null;
 
@@ -44,6 +89,8 @@ export const afterWake = (text) => text.match(/\bjarvis\b[,.!?]*\s*(.*)$/i)?.[1]
 // For "search", title is the query; for "talk", it's what to say to Groq's chat.
 export function parse(text, now = new Date()) {
   const clean = text.trim().toLowerCase().replace(/^(?:hey |ok )?jarvis[,.]?\s*/, "").replace(/[.!?]+$/, "");
+  const control = browserCommand(clean);
+  if (control) return control;
   const play = clean.match(PLAY);
   const site = clean.match(SEARCH_ON) ?? (play && [play[0], play[1], "youtube"]);
   if (site) return { type: "open", title: `${site[1]} on ${site[2]}`, when: null, url: SEARCH_URL[site[2]] + encodeURIComponent(site[1]) };

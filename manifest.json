@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Jarvis",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Voice tasks, events, reminders, web search and site shortcuts. Say Jarvis or press Alt+J.",
-  "permissions": ["storage", "alarms", "notifications", "tts", "offscreen", "tabs"],
-  "host_permissions": ["https://api.groq.com/*"],
+  "permissions": ["storage", "alarms", "notifications", "tts", "offscreen", "tabs", "scripting", "sessions"],
+  "host_permissions": ["https://api.groq.com/*", "<all_urls>"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_popup": "popup.html", "default_title": "Jarvis (Alt+J)" },
   "options_page": "options.html",
