@@ -5,7 +5,7 @@ import { isYes } from "../page.js";
 import { briefing } from "../briefing.js";
 import { getItems, addItem, removeItem, toggleDone } from "../store.js";
 import { speak, stopSpeaking, AI_VOICES, getVoices } from "../voice.js";
-import { winCommand, CONFIRM, timeLine, partOfDay, statusLine, weatherLine, ack } from "./win.js";
+import { fixWake, winCommand, CONFIRM, timeLine, partOfDay, statusLine, weatherLine, ack } from "./win.js";
 import { startMic, transcribe } from "./mic.js";
 
 const $ = (id) => document.getElementById(id);
@@ -288,7 +288,9 @@ async function onPhrase(wav) {
   if (!key) return;
   let heard;
   try {
-    heard = await transcribe(wav, key);
+    const t = await transcribe(wav, key);
+    heard = fixWake(t.text);
+    win("heard", `${t.raw}${t.raw === heard ? "" : `  →  ${heard}`}`); // heard.log, to see what it gets wrong
   } catch (e) {
     return say(`Listening failed: ${e.message}`);
   }

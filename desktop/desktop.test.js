@@ -80,3 +80,18 @@ test("spoken lines", () => {
   const w = { current: { temperature_2m: 4.4, weather_code: 61 }, daily: { temperature_2m_max: [6.2], temperature_2m_min: [1] } };
   assert.equal(weatherLine(w, "Tashkent"), "It's 4 degrees in Tashkent with rain. Today ranges from 1 to 6. A coat would be wise.");
 });
+
+test("near misses of the name still wake Jarvis", async () => {
+  const { fixWake } = await import("./win.js");
+  assert.equal(fixWake("Travis, open Spotify."), "Jarvis, open Spotify.");
+  assert.equal(fixWake("jervis what time is it"), "Jarvis what time is it");
+  assert.equal(fixWake("open travisty"), "open travisty");
+});
+
+test("drops what Whisper itself marks as noise or a guess", async () => {
+  const { keepSure } = await import("./mic.js");
+  const seg = (text, no_speech_prob, avg_logprob) => ({ text, no_speech_prob, avg_logprob });
+  assert.equal(keepSure([seg(" Jarvis, pause.", 0.01, -0.2), seg(" Thank you.", 0.9, -1.0)]), "Jarvis, pause.");
+  assert.equal(keepSure([seg(" mumble", 0.1, -1.6)]), "");
+  assert.equal(keepSure(undefined, " plain "), "plain");
+});

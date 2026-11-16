@@ -101,3 +101,7 @@ export function weatherLine(w, city) {
 
 const ACKS = ["Done.", "As you wish.", "Right away.", "Consider it done.", "Very good."];
 export const ack = () => ACKS[Math.floor(Math.random() * ACKS.length)];
+
+// Whisper sometimes writes the name as a near miss; treat those as "Jarvis" so the wake word still works.
+const NEAR_JARVIS = /\b(?:jarv[ie]s|jarves|jarvi|jarviz|jarbis|jervis|javis|jarvas|charvis|garvis|travis)\b/gi;
+export const fixWake = (text) => text.replace(NEAR_JARVIS, "Jarvis");

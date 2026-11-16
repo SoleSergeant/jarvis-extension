@@ -225,6 +225,13 @@ async function winCmd({ action, arg } = {}) {
       orbAt = isOpen ? { x: x + PANEL.width - ORB, y: y + PANEL.height - ORB } : { x, y };
       return fs.promises.writeFile(posFile(), JSON.stringify(orbAt));
     }
+    case "heard": {
+      // Local only: the last few hundred phrases, to find words it keeps getting wrong.
+      if (typeof arg !== "string" || arg.length > 1000) throw new Error("bad text");
+      const file = path.join(app.getPath("userData"), "heard.log");
+      const old = fs.existsSync(file) ? fs.readFileSync(file, "utf8").split("\n").slice(-300) : [];
+      return fs.promises.writeFile(file, [...old, `${new Date().toISOString()}  ${arg.replace(/\s+/g, " ")}`].join("\n"));
+    }
     case "ext":
       return toExt(arg);
     case "extHello":

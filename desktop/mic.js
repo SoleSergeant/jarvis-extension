@@ -6,7 +6,7 @@ const RATE = 16000; // what Whisper wants; keeps uploads small
 
 // Cuts a stream of audio chunks into utterances. feed() returns the chunks of a finished utterance, or null.
 export class Segmenter {
-  constructor({ pre = 4, hang = 8, min = 3, max = 180, floorMin = 0.008 } = {}) {
+  constructor({ pre = 6, hang = 10, min = 3, max = 180, floorMin = 0.008 } = {}) {
     Object.assign(this, { pre, hang, min, max, floorMin, floor: floorMin, ring: [], seg: null });
   }
   get speaking() {
@@ -71,19 +71,35 @@ export function encodeWav(x, rate = RATE) {
   return buf;
 }
 
+// Words Jarvis expects, so Whisper spells them right instead of guessing similar-sounding ones.
+const PROMPT = "Jarvis, open Spotify. Jarvis, set the volume to 30. Remind me to study at 5 PM. Next tab, close YouTube, pause, skip the ad, what's the weather, what time is it.";
+
+// Whisper marks parts it thinks were noise or a guess; those are where most wrong words come from.
+export function keepSure(segments, text) {
+  if (!segments?.length) return (text ?? "").trim();
+  return segments
+    .filter((s) => !(s.no_speech_prob > 0.6 && s.avg_logprob < -0.8) && !(s.avg_logprob < -1.3))
+    .map((s) => s.text)
+    .join("")
+    .trim();
+}
+
 export async function transcribe(wav, key) {
   const form = new FormData();
   form.append("file", new Blob([wav], { type: "audio/wav" }), "speech.wav");
-  form.append("model", "whisper-large-v3-turbo");
+  form.append("model", "whisper-large-v3"); // the full model hears noticeably better than turbo, for a little more time
   form.append("language", "en");
-  form.append("prompt", "Jarvis"); // helps Whisper spell the name
+  form.append("temperature", "0");
+  form.append("prompt", PROMPT);
+  form.append("response_format", "verbose_json");
   const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
     body: form,
   });
   if (!res.ok) throw new Error(`Groq listening ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  return ((await res.json()).text ?? "").trim();
+  const j = await res.json();
+  return { text: keepSure(j.segments, j.text), raw: (j.text ?? "").trim() };
 }
 
 // Calls onPhrase(wav) for each phrase heard and onSpeaking(bool) as speech starts and stops.
