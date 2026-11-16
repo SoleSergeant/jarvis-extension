@@ -3,13 +3,39 @@
   "name": "Jarvis",
   "version": "0.5.0",
   "description": "Voice tasks, events, reminders, web search and site shortcuts. Say Jarvis or press Alt+J.",
-  "permissions": ["storage", "alarms", "notifications", "tts", "offscreen", "tabs", "scripting", "sessions"],
-  "host_permissions": ["https://api.groq.com/*", "<all_urls>"],
-  "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_popup": "popup.html", "default_title": "Jarvis (Alt+J)" },
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "tts",
+    "offscreen",
+    "tabs",
+    "scripting",
+    "sessions"
+  ],
+  "host_permissions": [
+    "https://api.groq.com/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Jarvis (Alt+J)"
+  },
   "options_page": "options.html",
-  "icons": { "128": "icon.png" },
+  "icons": {
+    "128": "icon.png"
+  },
   "commands": {
-    "_execute_action": { "suggested_key": { "default": "Alt+J" }, "description": "Open Jarvis and start listening" }
-  }
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+J"
+      },
+      "description": "Open Jarvis and start listening"
+    }
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA47SEYjFe5sSGUjOlwZz2ta6nSPYOkliwet2Y0KzT/spc7UWfpRaFhw1dF2F0p2idDvy/Ejr/+B7NAzEHldkKN8fK5ABi74ks7Z5bzOTYENFV/cW4pz9Dp5e/JJ8gsAWjKT+Qvg9g0Q4kgLt5a6dKndLr+WCqHW0iyzRCZD6pSo///vqQKjIk3gyVbhO4n9K3tMYfwJaCiv83aU1rL8HCH9TBbyFu5N7MXPdGtIp61vB0FdTIjOcop3gqhI0+I0yDOgZNR0l7or3q3CCERKBjQ+AWyi+/MMS954b+4eVPxih8LPUtj3+AhU4FKslxxGRH+XVSHD+hooUFloxiI+lpSwIDAQAB"
 }

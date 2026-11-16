@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const CHANNELS = ["expand", "toggle-wake", "ptt"];
+const CHANNELS = ["expand", "toggle-wake", "ptt", "ext"];
 contextBridge.exposeInMainWorld("jarvis", {
   win: (cmd) => ipcRenderer.invoke("win", cmd),
   expand: (open) => ipcRenderer.invoke("win", { action: "expand", arg: open }),

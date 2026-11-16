@@ -18,6 +18,7 @@ let pending = null; // a risky click or type waiting for "yes"
 // Answers to a command are shown and spoken; progress messages ("Listening…") are only shown.
 // onEnd runs when this reply has finished or was cut off, unless a newer reply replaced it.
 function reply(msg, spoken = msg, onEnd) {
+  if (linked) return replyOnDesktop(msg, spoken, onEnd);
   const n = ++replies;
   speakingUntil = Infinity;
   say(msg);
@@ -216,10 +217,11 @@ function listen() {
 
 // Always-on mode for the pinned tab: only what follows "Jarvis" counts. While Jarvis talks, only "stop" or
 // "Jarvis, …" get through: the rest is mostly his own voice coming back through the speakers.
+let wakeRec = null;
 function wakeListen() {
   if (!SR) return say("Speech recognition isn't available in this browser.");
   document.title = "Jarvis is listening";
-  const rec = new SR();
+  const rec = (wakeRec = new SR());
   rec.lang = "en-US";
   rec.continuous = true;
   rec.interimResults = true; // shown live, so you can see whether Chrome is still hearing you
@@ -231,7 +233,7 @@ function wakeListen() {
   };
   rec.onend = () => {
     $("mic").classList.remove("on");
-    setTimeout(() => rec.start(), retryMs); // Chrome ends sessions on its own, so keep restarting
+    if (!linked) setTimeout(() => !linked && rec.start(), retryMs); // Chrome ends sessions on its own, so keep restarting
   };
   rec.onresult = (e) => {
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -260,10 +262,55 @@ function wakeListen() {
       rec.onend = null;
       return say("Microphone not allowed. Allow it in Setup, then reload this tab.");
     }
+    if (linked) return; // stopped on purpose: the desktop app is listening
     // Long wait on "aborted": Alt+J's popup took the mic, and restarting now would cut it off.
     if (e.error !== "no-speech") (retryMs = 15000), say(`Mic paused: ${e.error}`);
   };
   rec.start();
+}
+
+// ---- Desktop link: while the desktop Jarvis runs, it does the listening and talking, and this tab runs the
+// Chrome commands it passes on. So there's one Jarvis, not two answering at once.
+const DESKTOP = "ws://127.0.0.1:47621";
+let linked = null;
+const endWaits = new Map(); // "Shall I…?" replies: run their onEnd once the desktop has finished asking
+function replyOnDesktop(msg, spoken, onEnd) {
+  say(msg);
+  const rid = crypto.randomUUID();
+  if (onEnd) endWaits.set(rid, onEnd);
+  linked.send(JSON.stringify({ type: "reply", msg, spoken, ask: !!onEnd, rid }));
+  return Promise.resolve();
+}
+function linkDesktop() {
+  const ws = new WebSocket(DESKTOP);
+  ws.onopen = async () => {
+    linked = ws;
+    wakeRec?.abort();
+    stopSpeaking();
+    say("The desktop Jarvis is listening. This tab runs his Chrome commands.");
+    ws.send(JSON.stringify({ type: "hello", key: (await groqKey()) ?? null }));
+  };
+  ws.onmessage = async (e) => {
+    let m;
+    try {
+      m = JSON.parse(e.data);
+    } catch {
+      return;
+    }
+    if (m.type === "key" && typeof m.key === "string" && m.key) await chrome.storage.local.set({ groqKey: m.key });
+    if (m.type === "cmd" && typeof m.text === "string") handle(m.text);
+    if (m.type === "ended" && endWaits.has(m.rid)) endWaits.get(m.rid)(), endWaits.delete(m.rid);
+  };
+  ws.onclose = () => {
+    if (linked === ws) {
+      linked = null;
+      endWaits.clear();
+      try {
+        wakeRec?.start(); // back to listening here
+      } catch {} // already running
+    }
+    setTimeout(linkDesktop, 5000); // the desktop app may start later
+  };
 }
 
 $("mic").onclick = listen;
@@ -278,6 +325,7 @@ if (location.search === "?wake") {
   navigator.locks.request("jarvis-wake", { ifAvailable: true }, (lock) => {
     if (!lock) return chrome.tabs.getCurrent((tab) => chrome.tabs.remove(tab.id));
     wakeListen();
+    linkDesktop();
     return new Promise(() => {}); // held until this tab closes
   });
 } else listen();

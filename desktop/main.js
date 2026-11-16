@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
+import { WebSocketServer } from "ws";
 import { pick } from "./win.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -224,6 +225,10 @@ async function winCmd({ action, arg } = {}) {
       orbAt = isOpen ? { x: x + PANEL.width - ORB, y: y + PANEL.height - ORB } : { x, y };
       return fs.promises.writeFile(posFile(), JSON.stringify(orbAt));
     }
+    case "ext":
+      return toExt(arg);
+    case "extHello":
+      return extHello;
     case "expand":
       if (win.isDestroyed()) return;
       place(!!arg);
@@ -237,7 +242,46 @@ async function winCmd({ action, arg } = {}) {
   }
 }
 
+// ---- Link to the Chrome extension: its listening tab joins this socket, hands the microphone over, and runs
+// the tab and page commands we pass it. Only that extension may join: the browser sets Origin and pages can't fake it.
+const EXT_ORIGIN = "chrome-extension://ghjpbnmifagnijgpmcjkfbcjkdejmhfm"; // pinned by "key" in ../manifest.json
+const LINK_PORT = 47621;
+let ext = null;
+let extHello = null; // the extension's last hello, for a window that loads after it arrived
+function startLink() {
+  const wss = new WebSocketServer({ host: "127.0.0.1", port: LINK_PORT, maxPayload: 1 << 20, verifyClient: ({ origin }) => origin === EXT_ORIGIN });
+  wss.on("error", (e) => console.error("Chrome link unavailable:", e.message)); // e.g. another copy holds the port
+  wss.on("connection", (s) => {
+    ext?.close();
+    ext = s;
+    s.on("message", (d) => {
+      let m;
+      try {
+        m = JSON.parse(String(d));
+      } catch {
+        return;
+      }
+      if (m?.type === "hello") extHello = m;
+      send("ext", m);
+    });
+    s.on("close", () => {
+      if (ext !== s) return;
+      ext = extHello = null;
+      send("ext", { type: "down" });
+    });
+  });
+}
+const OUT = { cmd: ["text"], key: ["key"], ended: ["rid"] }; // what the window may send to Chrome, and its string fields
+function toExt(m) {
+  const fields = OUT[m?.type];
+  if (!fields || !fields.every((f) => str(m[f]) || (f === "key" && typeof m[f] === "string" && m[f].length < 400))) throw new Error("bad message");
+  if (!ext) return false;
+  ext.send(JSON.stringify(Object.fromEntries(["type", ...fields].map((f) => [f, m[f]]))));
+  return true;
+}
+
 app.whenReady().then(() => {
+  startLink();
   // Microphone for listening, notifications for reminders; nothing else.
   const allowed = (p) => p === "media" || p === "notifications";
   session.defaultSession.setPermissionRequestHandler((_wc, p, cb) => cb(allowed(p)));

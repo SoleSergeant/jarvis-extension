@@ -33,10 +33,41 @@ const groqKey = async () => (await chrome.storage.local.get("groqKey")).groqKey;
 const win = (action, arg) => window.jarvis.win({ action, arg });
 const icons = { task: "☐", event: "📅", reminder: "⏰" };
 const fmt = (ms) => new Date(ms).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const EXTENSION = "That one lives in the Chrome extension, I'm afraid. Press Alt+J in Chrome.";
+// ---- Chrome: the extension's listening tab links to us and runs tab and page commands. ----
+let extUp = false;
+let extAsk = 0; // when Chrome last asked "Shall I…?", so the answer goes back to it
+async function toChrome(text) {
+  armed = 0;
+  if (!extUp) return reply("Open Chrome and I'll see to that there.", "Open Chrome and I'll see to that there.");
+  say("🌐 Over to Chrome…");
+  await win("ext", { type: "cmd", text });
+}
+async function onExt(m) {
+  if (m.type === "down") return (extUp = false);
+  if (m.type === "hello") {
+    extUp = true;
+    // One Groq key for both: whichever side has it gives it to the other.
+    const mine = await groqKey();
+    if (mine && !m.key) win("ext", { type: "key", key: mine });
+    if (!mine && typeof m.key === "string" && m.key) {
+      await chrome.storage.local.set({ groqKey: m.key });
+      setup();
+      ensureMic();
+      say("Got your Groq key from Chrome.");
+    }
+    return;
+  }
+  if (m.type === "reply" && typeof m.msg === "string") {
+    const ask = m.ask && typeof m.rid === "string";
+    reply(m.msg, typeof m.spoken === "string" ? m.spoken : m.msg, ask ? () => ((extAsk = armed = Date.now()), win("ext", { type: "ended", rid: m.rid })) : undefined);
+  }
+}
+window.jarvis.on("ext", onExt);
+win("extHello").then((h) => h && onExt(h));
 
 async function handle(text) {
   say(`“${text}”…`);
+  if (Date.now() - extAsk < ECHO_MS + FOLLOW_UP_MS) return (extAsk = 0), toChrome(text); // the answer to Chrome's "Shall I…?"
   if (pending) {
     const p = pending;
     pending = null;
@@ -57,13 +88,14 @@ async function handle(text) {
     if (!cmd) return talk(text);
   }
   try {
-    if (cmd.type === "media") return await media(cmd);
+    if (cmd.type === "media") return await media(cmd, text);
     if (cmd.type === "browser") {
-      if (cmd.action !== "closeMatch") return reply(EXTENSION);
+      if (cmd.action !== "closeMatch") return toChrome(text);
+      // "close spotify": an app if one is open, otherwise a Chrome tab.
       const name = await win("closeApp", cmd.title);
-      return reply(name ? `Closing ${name}.` : `No app called ${cmd.title} is open. Closing tabs is the Chrome extension's job.`);
+      return name ? reply(`Closing ${name}.`) : toChrome(text);
     }
-    if (cmd.type === "page") return reply(EXTENSION);
+    if (cmd.type === "page") return toChrome(text);
     if (cmd.type === "briefing") return reply(briefing(await getItems()));
     if (cmd.type === "search") return search(cmd.title);
     if (cmd.type === "talk") return talk(text);
@@ -85,11 +117,11 @@ async function handle(text) {
 }
 
 // Video and music: the keyboard's media keys reach whatever is playing, in any app.
-async function media(cmd) {
+async function media(cmd, text) {
   const keys = { play: "play", pause: "play", next: "next" }[cmd.action];
   if (keys) return await win(keys), say(`⏯ ${ack()}`);
   if (cmd.action === "volume") return await win(cmd.n > 0 ? "louder" : "quieter"), say(cmd.n > 0 ? "🔊 Louder." : "🔉 Quieter.");
-  return reply(EXTENSION);
+  return toChrome(text); // seek, speed, restart, skip ad, full screen: the video in Chrome
 }
 
 async function doWin(cmd, confirmed = false) {
@@ -362,6 +394,7 @@ $("setup").onsubmit = async (e) => {
   await chrome.storage.local.set({ groqKey: key || undefined, voiceName: $("voice").value || undefined }); // undefined removes it: an empty key once looked "set"
   if (!$("voice").value) await chrome.storage.local.remove("voiceName");
   say("Saved.");
+  if (key) win("ext", { type: "key", key });
   ensureMic();
 };
 
