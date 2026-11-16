@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Jarvis</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="shim.js"></script>
+  <script type="module" src="../offscreen.js"></script>
+  <script type="module" src="renderer.js"></script>
+</head>
+<body>
+  <section class="panel" aria-label="Jarvis">
+    <header>
+      <h1>JARVIS</h1>
+      <label class="toggle"><input type="checkbox" id="wake"> Listen for “Jarvis”</label>
+      <button id="close" aria-label="Fold into the orb">—</button>
+    </header>
+    <p id="status" role="status" aria-live="polite">Online.</p>
+    <p id="heard" aria-label="What Jarvis heard"></p>
+    <form id="typed">
+      <input id="text" placeholder="Type a command… (Ctrl+Alt+J to talk)" aria-label="Type a command" autocomplete="off">
+    </form>
+    <ul id="list" aria-label="Tasks and reminders"></ul>
+    <details>
+      <summary>Setup</summary>
+      <form id="setup">
+        <label>Groq API key <input id="key" type="password" autocomplete="off" spellcheck="false"></label>
+        <label>Voice <select id="voice"></select></label>
+        <button>Save</button>
+      </form>
+    </details>
+  </section>
+  <button id="orb" aria-label="Jarvis: open or close the panel"><span></span></button>
+</body>
+</html>

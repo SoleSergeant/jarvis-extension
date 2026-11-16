@@ -1,0 +1,57 @@
+:root {
+  --cyan: #38e1ff;
+  --cyan-dim: #38e1ff55;
+  --amber: #ffb347;
+  --bg: #050b14ee;
+  --fg: #d8f6ff;
+  --muted: #7fa9b8;
+  --line: #38e1ff33;
+  color-scheme: dark;
+}
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+body { font: 13px "Segoe UI", system-ui, sans-serif; color: var(--fg); user-select: none; }
+
+/* The orb sits in the bottom-right corner of the window, collapsed or open. */
+#orb {
+  position: fixed; right: 12px; bottom: 12px; width: 72px; height: 72px; padding: 0;
+  border-radius: 50%; border: 2px solid var(--cyan); cursor: grab; touch-action: none;
+  background: radial-gradient(circle at 50% 50%, #bff6ff 0 8%, var(--cyan) 18%, #0a4a66 52%, #02121c 72%);
+  box-shadow: 0 0 10px var(--cyan), inset 0 0 14px var(--cyan-dim);
+  animation: breathe 4s ease-in-out infinite;
+}
+#orb span { position: absolute; inset: 6px; border-radius: 50%; border: 1px dashed var(--cyan-dim); animation: spin 14s linear infinite; }
+#orb:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+body.hearing #orb { box-shadow: 0 0 14px var(--cyan), 0 0 0 4px var(--cyan-dim); }
+body.talking #orb { animation: pulse 0.6s ease-in-out infinite alternate; }
+body.talking #orb span { animation-duration: 3s; }
+@keyframes breathe { 50% { box-shadow: 0 0 6px var(--cyan), inset 0 0 8px var(--cyan-dim); } }
+@keyframes pulse { to { box-shadow: 0 0 12px var(--cyan), 0 0 0 3px var(--cyan-dim); transform: scale(1.04); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #orb, #orb span { animation: none !important; } }
+
+.panel {
+  display: none; position: fixed; inset: 0 0 96px 0; box-sizing: border-box; padding: 14px;
+  flex-direction: column; gap: 8px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: inset 0 0 30px #38e1ff14;
+}
+body.open .panel { display: flex; }
+header { display: flex; align-items: center; gap: 10px; }
+h1 { margin: 0; font-size: 14px; letter-spacing: 0.35em; color: var(--cyan); text-shadow: 0 0 8px var(--cyan-dim); flex: 1; }
+.toggle { color: var(--muted); font-size: 12px; display: flex; gap: 4px; align-items: center; }
+#close { border: none; background: none; color: var(--muted); cursor: pointer; font-size: 16px; }
+#status { margin: 4px 0 0; font-size: 15px; line-height: 1.4; user-select: text; max-height: 140px; overflow-y: auto; }
+#heard { margin: 0; min-height: 1.2em; color: var(--muted); font-size: 12px; }
+input, select { box-sizing: border-box; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #02121c; color: inherit; font: inherit; }
+input:focus, select:focus { outline: 1px solid var(--cyan); }
+.toggle input { width: auto; }
+ul { list-style: none; padding: 0; margin: 4px 0 0; flex: 1; overflow-y: auto; }
+li { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+li.done .title { text-decoration: line-through; color: var(--muted); }
+.title { flex: 1; }
+.meta { color: var(--muted); font-size: 11px; }
+li button { border: none; background: none; color: var(--muted); cursor: pointer; }
+details { color: var(--muted); font-size: 12px; }
+summary { cursor: pointer; }
+#setup { display: grid; gap: 6px; margin-top: 6px; }
+#setup button { justify-self: start; padding: 6px 14px; border: 1px solid var(--cyan); border-radius: 6px; background: none; color: var(--cyan); cursor: pointer; }

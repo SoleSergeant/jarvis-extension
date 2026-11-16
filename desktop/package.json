@@ -1,0 +1,13 @@
+{
+  "name": "jarvis-desktop",
+  "private": true,
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "electron": "^39.8.10"
+  }
+}
