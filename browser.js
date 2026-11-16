@@ -1,4 +1,4 @@
-import { scrollPage } from "./page.js";
+import { scrollPage, media } from "./page.js";
 
 // Pages Chrome won't let an extension script, plus Jarvis's own pages.
 export function canControl(url, extOrigin) {
@@ -22,6 +22,22 @@ async function activate(tab) {
   await chrome.tabs.update(tab.id, { active: true });
   await chrome.windows.update(tab.windowId, { focused: true });
   return `Switched to ${tab.title}.`;
+}
+
+// Runs a {type: "media"} command from parse.js on the current page and returns what to say.
+export async function runMedia(cmd) {
+  const tab = await targetTab();
+  if (!tab) return "I can't find a tab to control.";
+  if (cmd.action === "fullscreen") {
+    // Chrome only lets a real click put a video itself in full screen, so this is the whole window.
+    const win = await chrome.windows.get(tab.windowId);
+    const full = win.state === "fullscreen";
+    await chrome.windows.update(tab.windowId, { state: full ? "maximized" : "fullscreen" });
+    return full ? "Left full screen." : "Full screen.";
+  }
+  if (!canControl(tab.url, location.origin)) return "I can't control this page.";
+  const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: media, args: [cmd.action, cmd.n ?? 0] });
+  return result;
 }
 
 // Runs a {type: "browser"} command from parse.js and returns what to say.

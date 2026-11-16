@@ -10,8 +10,8 @@ const COMMANDS = [
 const TAB = String.raw`(?:(?:this|the|current)\s+)?(?:tab|page)`;
 const BROWSER = [
   [new RegExp(`^close ${TAB}$`), "close"],
-  [/^(?:next|right) tab$/, "next"],
-  [/^(?:previous|last|left) tab$/, "prev"],
+  [/^(?:go to )?(?:the )?(?:next|right) tab$/, "next"],
+  [/^(?:go to )?(?:the )?(?:previous|last|left) tab$/, "prev"],
   [/^re-?open (?:the )?(?:last )?(?:closed )?tab$/, "reopen"],
   [/^go back$/, "back"],
   [/^go forward$/, "forward"],
@@ -23,6 +23,26 @@ const BROWSER = [
   [new RegExp(`^mute ${TAB}$`), "mute"],
   [new RegExp(`^unmute ${TAB}$`), "unmute"],
 ];
+const IT = String.raw`(?: (?:the )?(?:video|music|song|it))?`;
+const SPAN = String.raw`(?: by)? (\d+) (second|minute)s?`;
+const seconds = (m) => Number(m[1]) * (m[2] === "minute" ? 60 : 1);
+// Video and music on the current page: [pattern, action, n from the match (optional)].
+const MEDIA = [
+  [new RegExp(`^pause${IT}$`), "pause"],
+  [new RegExp(`^(?:play|resume|continue|unpause)${IT}$`), "play"],
+  [new RegExp(`^(?:skip|jump|go|fast forward|forward)(?: forward| ahead)?${SPAN}$`), "seek", seconds],
+  [new RegExp(`^(?:go back|jump back|skip back|rewind|back)${SPAN}$`), "seek", (m) => -seconds(m)],
+  [new RegExp(`^(?:restart|replay)${IT}$`), "restart"],
+  [/^(?:volume up|louder|turn (?:it |the volume )?up)$/, "volume", () => 1],
+  [/^(?:volume down|quieter|turn (?:it |the volume )?down)$/, "volume", () => -1],
+  [/^(?:faster|speed (?:it )?up)$/, "speed", () => 1],
+  [/^(?:slower|slow (?:it )?down)$/, "speed", () => -1],
+  [/^(?:normal speed|regular speed)$/, "speed", () => 0],
+  [/^(?:next (?:video|song|track)|skip (?:this )?(?:video|song|track))$/, "next"],
+  [/^skip (?:the )?ads?$/, "skipAd"],
+  [/^(?:go |exit |leave )?full ?screen$/, "fullscreen"],
+];
+const BRIEFING = /^(?:what's on (?:for )?today|what do i have(?: on)? today|(?:give me )?(?:my )?(?:daily )?briefing|what's my day(?: look like)?|what does my day look like)$/;
 const SWITCH = /^(?:switch|go) to (?:the )?(.+?) tab$/;
 const CLOSE_MATCH = /^close (?:the )?(.+?)(?: tab)?$/; // after BROWSER, so "close this tab" stays "close"
 const CLICK = /^(?:click|press|tap)(?: on)? (.+)$/;
@@ -36,6 +56,10 @@ function browserCommand(clean) {
   const hit = BROWSER.find(([re]) => re.test(clean));
   if (hit) return { type: "browser", action: hit[1], title: clean, when: null };
   let m;
+  for (const [re, action, n] of MEDIA) {
+    if ((m = clean.match(re))) return { type: "media", action, ...(n ? { n: n(m) } : {}), title: clean, when: null };
+  }
+  if (BRIEFING.test(clean)) return { type: "briefing", title: clean, when: null };
   if ((m = clean.match(SWITCH))) return { type: "browser", action: "switch", title: m[1], when: null };
   if ((m = clean.match(CLOSE_MATCH))) return { type: "browser", action: "closeMatch", title: m[1], when: null };
   if ((m = clean.match(SITE_SEARCH))) return page("siteSearch", null, m[1]);

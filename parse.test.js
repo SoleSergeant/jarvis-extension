@@ -76,3 +76,46 @@ test("isStop takes short stop phrases only", () => {
   for (const s of ["stop", "Stop.", "Jarvis, stop", "stop it", "stop talking", "quiet", "be quiet", "shut up", "enough", "that's enough", "okay stop"]) assert.ok(isStop(s), s);
   for (const s of ["stop the music on youtube", "the bus stop is near", "remind me to stop at 5pm", ""]) assert.ok(!isStop(s), s);
 });
+
+const media = (action, n) => ({ type: "media", action, ...(n === undefined ? {} : { n }) });
+test("video and music commands", () => {
+  const want = {
+    "pause": media("pause"),
+    "pause the video": media("pause"),
+    "play": media("play"),
+    "resume": media("play"),
+    "play the music": media("play"),
+    "skip 30 seconds": media("seek", 30),
+    "fast forward 2 minutes": media("seek", 120),
+    "go back 10 seconds": media("seek", -10),
+    "rewind 15 seconds": media("seek", -15),
+    "restart the video": media("restart"),
+    "volume up": media("volume", 1),
+    "turn it down": media("volume", -1),
+    "faster": media("speed", 1),
+    "slow down": media("speed", -1),
+    "normal speed": media("speed", 0),
+    "next video": media("next"),
+    "skip this song": media("next"),
+    "skip ad": media("skipAd"),
+    "skip the ads": media("skipAd"),
+    "full screen": media("fullscreen"),
+    "exit fullscreen": media("fullscreen"),
+  };
+  for (const [said, w] of Object.entries(want)) {
+    const got = parse(said, now);
+    assert.deepEqual({ type: got?.type, action: got?.action, ...(got?.n === undefined ? {} : { n: got.n }) }, w, said);
+  }
+});
+test("media rules leave older commands alone", () => {
+  assert.equal(parse("go back", now).action, "back");
+  assert.equal(parse("play bohemian rhapsody", now).type, "open");
+  assert.equal(parse("skip ad", now).type, "media");
+});
+test("go to the next tab means the next tab", () => {
+  assert.equal(parse("go to the next tab", now).action, "next");
+  assert.equal(parse("go to the previous tab", now).action, "prev");
+});
+test("briefing phrases", () => {
+  for (const s of ["what's on today", "what do I have today", "briefing", "Jarvis, give me my briefing", "what's my day look like"]) assert.equal(parse(s, now)?.type, "briefing", s);
+});

@@ -52,6 +52,7 @@ export function act(id, action, text, submit, label) {
     el.click();
     return "ok";
   }
+  if (!el.isContentEditable && !el.matches("input, textarea, select")) return "not-field";
   el.focus();
   if (el.isContentEditable) el.textContent = text;
   else {
@@ -66,6 +67,47 @@ export function act(id, action, text, submit, label) {
     else el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true }));
   }
   return "ok";
+}
+
+// Controls the page's main video or audio and returns what to say. Self-contained, like snapshot and act.
+export function media(action, n) {
+  if (action === "skipAd") {
+    const skip = document.querySelector(".ytp-skip-ad-button, .ytp-ad-skip-button, .ytp-ad-skip-button-modern");
+    return skip ? (skip.click(), "Skipped the ad.") : "There's no ad to skip right now.";
+  }
+  if (action === "next") {
+    const next = document.querySelector(".ytp-next-button");
+    return next ? (next.click(), "Next one.") : "I can't find a next button on this page.";
+  }
+  // The one that's playing, else the biggest visible video, else any audio.
+  const size = (m) => m.getBoundingClientRect().width * m.getBoundingClientRect().height;
+  const all = [...document.querySelectorAll("video, audio")];
+  const m = all.find((x) => !x.paused) ?? all.filter((x) => x.tagName === "VIDEO").sort((a, b) => size(b) - size(a))[0] ?? all[0];
+  if (!m) return "There's no video or music on this page.";
+  const speed = (r) => `${Math.round(r * 100) / 100}x speed.`;
+  switch (action) {
+    case "pause":
+      m.pause();
+      return "Paused.";
+    case "play":
+      m.play().catch(() => {}); // the page may refuse without a real click; nothing more to do
+      return "Playing.";
+    case "restart":
+      m.currentTime = 0;
+      m.play().catch(() => {});
+      return "From the top.";
+    case "seek":
+      m.currentTime = Math.max(0, Math.min(m.duration || Infinity, m.currentTime + n));
+      return n > 0 ? `Skipped ${Math.abs(n)} seconds.` : `Back ${Math.abs(n)} seconds.`;
+    case "volume":
+      m.muted = false;
+      m.volume = Math.max(0, Math.min(1, Math.round((m.volume + 0.2 * n) * 10) / 10));
+      return `Volume ${Math.round(m.volume * 100)} percent.`;
+    case "speed":
+      m.playbackRate = n === 0 ? 1 : Math.max(0.25, Math.min(3, m.playbackRate + 0.25 * n));
+      return n === 0 ? "Normal speed." : speed(m.playbackRate);
+  }
+  return "I can't do that with this video.";
 }
 
 export function scrollPage(how) {

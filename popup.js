@@ -1,7 +1,8 @@
 import { parse, afterWake, isStop } from "./parse.js";
 import { groqParse, groqSearch, groqTalk, groqPage } from "./groq.js";
 import { snapshot, act, matchText, countMatches, isRisky, isYes, isSearchField } from "./page.js";
-import { runBrowser, targetTab, canControl } from "./browser.js";
+import { runBrowser, runMedia, targetTab, canControl } from "./browser.js";
+import { briefing } from "./briefing.js";
 import { getItems, addItem, removeItem, toggleDone } from "./store.js";
 import { speak, stopSpeaking } from "./voice.js";
 
@@ -47,7 +48,14 @@ async function handle(text) {
     }
     if (!cmd) return talk(text);
   }
-  if (cmd.type === "browser") return reply(await runBrowser(cmd));
+  if (cmd.type === "browser" || cmd.type === "media") {
+    try {
+      return reply(await (cmd.type === "media" ? runMedia(cmd) : runBrowser(cmd)));
+    } catch (e) {
+      return reply(`That didn't work: ${e.message}`, "That didn't work.");
+    }
+  }
+  if (cmd.type === "briefing") return reply(briefing(await getItems()));
   if (cmd.type === "page") return doPage(cmd);
   if (cmd.type === "search") return search(cmd.title);
   if (cmd.type === "talk") return talk(text);
@@ -127,6 +135,7 @@ async function runAct(p) {
   }
   if (out === "gone") return reply("That's no longer on the page. Try again.");
   if (out === "sensitive") return reply("I won't touch password or card fields.");
+  if (out === "not-field") return reply("I can only type into text fields.");
   return reply(p.say);
 }
 
